@@ -1,0 +1,55 @@
+import React, { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { setAuthToken } from "./api/http";
+
+import VerifyPage from "./pages/VerifyPage.jsx";
+import AdminLogin from "./pages/AdminLogin.jsx";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage.jsx";
+import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
+import AdminLayout from "./pages/AdminLayout.jsx";
+import AdminDashboard from "./pages/AdminDashboard.jsx";
+import EmployeesPage from "./pages/EmployeesPage.jsx";
+import LogsPage from "./pages/LogsPage.jsx";
+import ChangePasswordPage from "./pages/ChangePasswordPage.jsx";
+
+function Protected({ children }) {
+  const token = localStorage.getItem("token");
+  if (!token) return <Navigate to="/admin/login" replace />;
+  return children;
+}
+
+export default function App() {
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) setAuthToken(token);
+  }, []);
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<VerifyPage />} />
+        <Route path="/verify" element={<VerifyPage />} />
+
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/admin/reset-password" element={<ResetPasswordPage />} />
+
+        <Route
+          path="/admin"
+          element={
+            <Protected>
+              <AdminLayout />
+            </Protected>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="employees" element={<EmployeesPage />} />
+          <Route path="logs" element={<LogsPage />} />
+          <Route path="change-password" element={<ChangePasswordPage />} />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/verify" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
