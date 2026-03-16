@@ -14,14 +14,21 @@ import ChangePasswordPage from "./pages/ChangePasswordPage.jsx";
 
 function Protected({ children }) {
   const token = localStorage.getItem("token");
-  if (!token) return <Navigate to="/admin/login" replace />;
+
+  if (!token) {
+    return <Navigate to="/admin/login" replace />;
+  }
+
+  setAuthToken(token);
   return children;
 }
 
 export default function App() {
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) setAuthToken(token);
+    if (token) {
+      setAuthToken(token);
+    }
   }, []);
 
   return (

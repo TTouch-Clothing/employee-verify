@@ -4,12 +4,14 @@ import Card from "../components/Card";
 import Input from "../components/Input";
 import Badge from "../components/Badge";
 import toast from "react-hot-toast";
+import { X } from "lucide-react";
 
 export default function VerifyPage() {
   const [employeeId, setEmployeeId] = useState("");
   const [secret, setSecret] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [previewImage, setPreviewImage] = useState("");
 
   async function onVerify(e) {
     e.preventDefault();
@@ -38,21 +40,18 @@ export default function VerifyPage() {
   const statusTone = (st) =>
     st === "ACTIVE" ? "green" : st === "INACTIVE" ? "yellow" : "red";
 
-function formatDate(value) {
-  if (!value) return "";
+  function formatDate(value) {
+    if (!value) return "";
 
-  const date = new Date(value);
+    const date = new Date(value);
+    const day = date.getDate();
+    const month = date.toLocaleString("en-US", {
+      month: "long"
+    });
+    const year = date.getFullYear();
 
-  const day = date.getDate();
-
-  const month = date.toLocaleString("en-US", {
-    month: "long"
-  });
-
-  const year = date.getFullYear();
-
-  return `${day} ${month}, ${year}`;
-}
+    return `${day} ${month}, ${year}`;
+  }
 
   function getDuration(employee) {
     const join = formatDate(employee?.joinDate);
@@ -69,30 +68,27 @@ function formatDate(value) {
 
   return (
     <div>
-
       <div>
-  <div className="topbar">
-    <div className="container">
+        <div className="topbar">
+          <div className="container">
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <img
+                src="/titleImg.png"
+                alt="TTouch Logo"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  objectFit: "cover"
+                }}
+              />
+              <div style={{ fontWeight: 900 }}>Touch Clothing</div>
+            </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <img
-          src="/titleImg.png"
-          alt="TTouch Logo"
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: "50%",
-            objectFit: "cover"
-          }}
-        />
-        <div style={{ fontWeight: 900 }}>Touch Clothing</div>
+            <div style={{ opacity: 0.9 }}>Employee Verification</div>
+          </div>
+        </div>
       </div>
-
-      <div style={{ opacity: 0.9 }}>Employee Verification</div>
-
-    </div>
-  </div>
-</div>
 
       <div className="container">
         <div className="h1">Employee Verification</div>
@@ -169,12 +165,19 @@ function formatDate(value) {
                       "https://via.placeholder.com/80"
                     }
                     alt="Employee"
+                    onClick={() =>
+                      setPreviewImage(
+                        result.data.employee.photoUrl ||
+                          "https://via.placeholder.com/600"
+                      )
+                    }
                     style={{
                       width: 84,
                       height: 84,
                       borderRadius: 14,
                       objectFit: "cover",
-                      border: "1px solid var(--border)"
+                      border: "1px solid var(--border)",
+                      cursor: "pointer"
                     }}
                   />
 
@@ -259,9 +262,73 @@ function formatDate(value) {
         </div>
 
         <div className="footer">
-          © {new Date().getFullYear()} T Touch Clothing (IT Department) · Privacy Notice
+          © {new Date().getFullYear()} T Touch Clothing (IT Department) ·
+          Privacy Notice
         </div>
       </div>
+
+      {previewImage && (
+        <div
+          onClick={() => setPreviewImage("")}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.75)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            zIndex: 9999
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "relative",
+              maxWidth: "95vw",
+              maxHeight: "95vh",
+              width: "fit-content"
+            }}
+          >
+            <button
+              onClick={() => setPreviewImage("")}
+              style={{
+                position: "absolute",
+                top: -14,
+                right: -14,
+                width: 38,
+                height: 38,
+                borderRadius: "50%",
+                border: "none",
+                background: "#fff",
+                color: "#111",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.25)"
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            <img
+              src={previewImage}
+              alt="Preview"
+              style={{
+                display: "block",
+                maxWidth: "95vw",
+                maxHeight: "95vh",
+                width: "auto",
+                height: "auto",
+                borderRadius: 16,
+                objectFit: "contain",
+                background: "#fff"
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

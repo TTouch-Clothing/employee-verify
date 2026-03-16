@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { http, setAuthToken } from "../api/http";
 import Card from "../components/Card";
 import Input from "../components/Input";
 import toast from "react-hot-toast";
 
 export default function AdminLogin() {
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -25,7 +28,7 @@ export default function AdminLogin() {
       setAuthToken(data.token);
 
       toast.success("Login successful");
-      window.location.href = "/admin";
+      navigate("/admin", { replace: true });
     } catch (err) {
       toast.error(
         err?.response?.data?.message || "Invalid email or password"
@@ -36,31 +39,13 @@ export default function AdminLogin() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16
-      }}
-    >
-      <div style={{ width: "100%", maxWidth: 420 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            marginBottom: 18
-          }}
-        >
+    <div className="authPageWrap">
+      <div className="authBox">
+        <div className="authLogoWrap">
           <img
             src="/loginLogo.png"
             alt="Login Logo"
-            style={{
-              width: 150,
-              height: 150,
-              objectFit: "contain"
-            }}
+            className="authLogo"
           />
         </div>
 
@@ -110,19 +95,6 @@ export default function AdminLogin() {
                   }}
                 />
               </div>
-            </div>
-
-            <div style={{ textAlign: "right", marginTop: -2, marginBottom: 14 }}>
-              {/* <a
-                href="/admin/forgot-password"
-                style={{
-                  color: "#1d4ed8",
-                  fontSize: 14,
-                  fontWeight: 700
-                }}
-              >
-                Forgot Password?
-              </a> */}
             </div>
 
             <button

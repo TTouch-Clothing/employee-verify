@@ -10,11 +10,18 @@ import { verifyLimiter } from "./middleware/rateLimit.js";
 export function createApp() {
   const app = express();
 
-  app.use(helmet());
+  app.disable("x-powered-by");
+
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: "cross-origin" }
+    })
+  );
 
   app.use(
     cors({
-      origin: process.env.CORS_ORIGIN || "*"
+      origin: process.env.CORS_ORIGIN || "*",
+      credentials: true
     })
   );
 

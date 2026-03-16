@@ -76,14 +76,22 @@ export default function AdminDashboard() {
     limit: 5
   });
 
-  async function loadStats() {
-    try {
-      const { data } = await http.get("/api/admin/stats");
-      setStats(data);
-    } catch {
-      setStats({ error: true });
+async function loadStats() {
+  try {
+    const { data } = await http.get("/api/admin/stats");
+    setStats(data);
+  } catch (error) {
+    if (error?.response?.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("adminUser");
+      toast.error("Session expired. Please login again.");
+      window.location.href = "/admin/login";
+      return;
     }
+
+    setStats({ error: true });
   }
+}
 
   async function loadUsers(page = 1) {
     setUsersLoading(true);
@@ -201,10 +209,21 @@ export default function AdminDashboard() {
     loadUsers(1);
   }
 
-  if (!stats) return <div></div>;
-  if (stats.error) {
-    return <div style={{ color: "var(--red)" }}></div>;
-  }
+if (!stats) {
+  return (
+    <div style={{ padding: 20, fontWeight: 700, color: "var(--muted)" }}>
+      Loading dashboard...
+    </div>
+  );
+}
+
+if (stats.error) {
+  return (
+    <div style={{ padding: 20, color: "var(--red)", fontWeight: 700 }}>
+      Failed to load dashboard data.
+    </div>
+  );
+}
 
   const box = (title, value, color) => (
     <Card style={{ padding: 14 }}>

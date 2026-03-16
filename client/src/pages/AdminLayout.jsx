@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 
 export default function AdminLayout() {
   const loc = useLocation();
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const adminUser = JSON.parse(localStorage.getItem("adminUser") || "null");
 
@@ -18,32 +20,55 @@ export default function AdminLayout() {
     navigate("/admin/login", { replace: true });
   }
 
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [loc.pathname]);
+
   return (
-    <div style={{ minHeight: "100vh", background: "#f3f4f6" }}>
-      <aside
-        style={{
-          width: 240,
-          background: "#0b1f4b",
-          color: "#fff",
-          position: "fixed",
-          left: 0,
-          top: 0,
-          bottom: 0,
-          display: "flex",
-          flexDirection: "column",
-          padding: "20px 0",
-          zIndex: 1000
-        }}
-      >
+    <div className="adminLayoutWrap">
+      <div className="mobileTopbar">
+        <button
+          className="hamburgerBtn"
+          onClick={() => setMenuOpen(true)}
+          type="button"
+        >
+          <i className="fa fa-bars" />
+        </button>
+
+        <div className="mobileTopbarTitle">Admin Panel</div>
+
+        <div style={{ width: 40 }} />
+      </div>
+
+      {menuOpen && (
+        <div
+          className="mobileSidebarOverlay"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+
+      <aside className={`adminSidebar ${menuOpen ? "open" : ""}`}>
         <div
           style={{
             fontWeight: 900,
             fontSize: 18,
             padding: "0 20px",
-            marginBottom: 20
+            marginBottom: 20,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12
           }}
         >
-          Admin Panel
+          <span>Admin Panel</span>
+
+          <button
+            className="sidebarCloseBtn"
+            onClick={() => setMenuOpen(false)}
+            type="button"
+          >
+            <i className="fa fa-times" />
+          </button>
         </div>
 
         <Link
@@ -176,14 +201,7 @@ export default function AdminLayout() {
         </div>
       </aside>
 
-      <main
-        style={{
-          marginLeft: 240,
-          minHeight: "100vh",
-          padding: 20,
-          background: "#f3f4f6"
-        }}
-      >
+      <main className="adminMainContent">
         <Outlet />
       </main>
     </div>
