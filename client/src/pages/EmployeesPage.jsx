@@ -183,7 +183,7 @@ export default function EmployeesPage() {
               label="Search (ID or Name)"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="TT-000123 or Name"
+              placeholder="TT000123 or Name"
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleSearch();
               }}

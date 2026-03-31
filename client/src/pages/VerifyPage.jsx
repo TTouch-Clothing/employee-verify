@@ -101,7 +101,7 @@ export default function VerifyPage() {
             <form onSubmit={onVerify}>
               <Input
                 label="Employee ID"
-                placeholder="TT-000123"
+                placeholder="TT000123"
                 value={employeeId}
                 onChange={(e) => setEmployeeId(e.target.value)}
               />
