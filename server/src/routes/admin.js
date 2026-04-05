@@ -11,6 +11,7 @@ import { normalizeEmployeeId, normalizeSecret } from "../utils/normalize.js";
 import upload from "../middleware/upload.js";
 import uploadBufferToCloudinary from "../utils/uploadToCloudinary.js";
 import { sendEmail } from "../utils/sendEmail.js";
+import cloudinary from "../config/cloudinary.js";
 
 const router = express.Router();
 
@@ -26,6 +27,14 @@ function requireAdminOrHr(req, res, next) {
     return res.status(403).json({ message: "Only ADMIN or HR can perform this action" });
   }
   next();
+}
+
+function getEmployeePhotoPublicId(employeeId) {
+  return `employee-verify/employees/${employeeId}`;
+}
+
+function getAdminPhotoPublicId(email) {
+  return `employee-verify/employees/admin-${email.replace(/[^a-zA-Z0-9]/g, "_")}`;
 }
 
 /* =========================
@@ -86,7 +95,6 @@ router.post("/seed-admin", async (req, res) => {
   }
 });
 
-
 //------------------------Admin/ HR Login--------------------//
 router.post("/login", async (req, res) => {
   try {
@@ -123,15 +131,14 @@ router.post("/login", async (req, res) => {
     );
 
     return res.json({
-  token,
-  user: {
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    profileImageUrl: user.profileImageUrl || ""
-  }
-});
-
+      token,
+      user: {
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        profileImageUrl: user.profileImageUrl || ""
+      }
+    });
   } catch (err) {
     return res.status(500).json({
       message: "Server error",
@@ -139,7 +146,6 @@ router.post("/login", async (req, res) => {
     });
   }
 });
-
 
 //------------------------Admin/ HR Forgot Password--------------------//
 router.post("/forgot-password", async (req, res) => {
@@ -205,7 +211,6 @@ router.post("/forgot-password", async (req, res) => {
     });
   }
 });
-
 
 //------------------------Admin/ HR reset password--------------------//
 router.post("/reset-password", async (req, res) => {
@@ -276,15 +281,13 @@ router.post("/reset-password", async (req, res) => {
   }
 });
 
-
 /* =========================
    PROTECTED ROUTES
    ========================= */
 router.use(requireAuth);
 
 //------------------------Get All Admin & Hr--------------------//
-
-router.get("/users",requireAdminOrHr, async (req, res) => {
+router.get("/users", requireAdminOrHr, async (req, res) => {
   try {
     const search = String(req.query.search || "").trim();
 
@@ -401,14 +404,14 @@ router.post("/users", requireAdminOnly, upload.single("photo"), async (req, res)
 });
 
 /* =========================
-   CREATE ADMIN / HR
+   UPDATE ADMIN / HR
    ========================= */
-
-  router.put("/users/:id", requireAdminOnly, upload.single("photo"), async (req, res) => {
+router.put("/users/:id", requireAdminOnly, upload.single("photo"), async (req, res) => {
   try {
     const schema = Joi.object({
       name: Joi.string().min(2).max(80).required(),
-      role: Joi.string().valid("ADMIN", "HR").required()
+      role: Joi.string().valid("ADMIN", "HR").required(),
+      profileImageUrl: Joi.string().allow("").optional()
     });
 
     const { error, value } = schema.validate(req.body, { abortEarly: false });
@@ -427,15 +430,43 @@ router.post("/users", requireAdminOnly, upload.single("photo"), async (req, res)
       return res.status(404).json({ message: "User not found" });
     }
 
+    const publicId = `employee-verify/employees/admin-${existingUser.email.replace(/[^a-zA-Z0-9]/g, "_")}`;
     let profileImageUrl = existingUser.profileImageUrl || "";
 
+    // 1) new photo uploaded
     if (req.file) {
+      if (existingUser.profileImageUrl) {
+        try {
+          await cloudinary.uploader.destroy(publicId, {
+            resource_type: "image",
+            invalidate: true
+          });
+        } catch (cloudErr) {
+          console.error("Old admin image delete failed:", cloudErr);
+        }
+      }
+
       const uploadResult = await uploadBufferToCloudinary(req.file.buffer, {
         public_id: `admin-${existingUser.email.replace(/[^a-zA-Z0-9]/g, "_")}`,
         overwrite: true
       });
 
       profileImageUrl = uploadResult.secure_url;
+    }
+    // 2) current photo removed from frontend
+    else if (value.profileImageUrl === "") {
+      if (existingUser.profileImageUrl) {
+        try {
+          await cloudinary.uploader.destroy(publicId, {
+            resource_type: "image",
+            invalidate: true
+          });
+        } catch (cloudErr) {
+          console.error("Admin image delete failed:", cloudErr);
+        }
+      }
+
+      profileImageUrl = "";
     }
 
     const updated = await AdminUser.findByIdAndUpdate(
@@ -471,7 +502,6 @@ router.post("/users", requireAdminOnly, upload.single("photo"), async (req, res)
   }
 });
 
-
 /* =========================
    DELETE ADMIN / HR
    ========================= */
@@ -487,6 +517,19 @@ router.delete("/users/:id", requireAdminOnly, async (req, res) => {
       return res.status(400).json({ message: "You cannot delete your own account" });
     }
 
+    if (user.profileImageUrl) {
+      const publicId = `employee-verify/employees/admin-${user.email.replace(/[^a-zA-Z0-9]/g, "_")}`;
+
+      try {
+        await cloudinary.uploader.destroy(publicId, {
+          resource_type: "image",
+          invalidate: true
+        });
+      } catch (cloudErr) {
+        console.error("Admin Cloudinary delete failed:", cloudErr);
+      }
+    }
+
     await AdminUser.findByIdAndDelete(req.params.id);
 
     return res.json({ message: "User deleted successfully" });
@@ -497,8 +540,6 @@ router.delete("/users/:id", requireAdminOnly, async (req, res) => {
     });
   }
 });
-
-
 
 /* =========================
    CHANGE ADMIN PASSWORD
@@ -586,14 +627,13 @@ router.post("/logout", async (_req, res) => {
 /* =========================
    DASHBOARD STATS
    ========================= */
-router.get("/stats", async (req, res) => {
+router.get("/stats", async (_req, res) => {
   try {
-
     const todayStart = new Date();
-    todayStart.setHours(0,0,0,0);
+    todayStart.setHours(0, 0, 0, 0);
 
     const todayEnd = new Date();
-    todayEnd.setHours(23,59,59,999);
+    todayEnd.setHours(23, 59, 59, 999);
 
     const total = await Employee.countDocuments();
     const active = await Employee.countDocuments({ status: "ACTIVE" });
@@ -608,7 +648,6 @@ router.get("/stats", async (req, res) => {
       success: false
     });
 
-    // Information Technology
     const itTotal = await Employee.countDocuments({
       department: "Information Technology"
     });
@@ -623,7 +662,6 @@ router.get("/stats", async (req, res) => {
       status: { $ne: "ACTIVE" }
     });
 
-    // Distribution
     const distributionTotal = await Employee.countDocuments({
       department: "Distribution"
     });
@@ -638,7 +676,6 @@ router.get("/stats", async (req, res) => {
       status: { $ne: "ACTIVE" }
     });
 
-    // Customer Support
     const supportTotal = await Employee.countDocuments({
       department: "Customer Support Service"
     });
@@ -653,7 +690,6 @@ router.get("/stats", async (req, res) => {
       status: { $ne: "ACTIVE" }
     });
 
-    // Content
     const contentTotal = await Employee.countDocuments({
       department: "Content"
     });
@@ -668,7 +704,6 @@ router.get("/stats", async (req, res) => {
       status: { $ne: "ACTIVE" }
     });
 
-    // Moderator
     const moderatorTotal = await Employee.countDocuments({
       department: "Moderator"
     });
@@ -688,41 +723,34 @@ router.get("/stats", async (req, res) => {
       active,
       verifyToday,
       failedToday,
-
       departments: {
         informationTechnology: {
           total: itTotal,
           active: itActive,
           inactive: itInactive
         },
-
         distribution: {
           total: distributionTotal,
           active: distributionActive,
           inactive: distributionInactive
         },
-
         customerSupport: {
           total: supportTotal,
           active: supportActive,
           inactive: supportInactive
         },
-
         content: {
           total: contentTotal,
           active: contentActive,
           inactive: contentInactive
         },
-
         moderator: {
           total: moderatorTotal,
           active: moderatorActive,
           inactive: moderatorInactive
         }
       }
-
     });
-
   } catch (err) {
     res.status(500).json({
       message: "Server error",
@@ -925,15 +953,40 @@ router.put("/employees/:id", upload.single("photo"), async (req, res) => {
       return res.status(404).json({ message: "Not found" });
     }
 
-    let finalPhotoUrl = value.photoUrl || employee.photoUrl || "";
+    const publicId = getEmployeePhotoPublicId(employee.employeeId);
+    let finalPhotoUrl = employee.photoUrl || "";
 
     if (req.file) {
+      if (employee.photoUrl) {
+        try {
+          await cloudinary.uploader.destroy(publicId, {
+            resource_type: "image",
+            invalidate: true
+          });
+        } catch (cloudErr) {
+          console.error("Old employee image delete failed:", cloudErr);
+        }
+      }
+
       const uploadResult = await uploadBufferToCloudinary(req.file.buffer, {
         public_id: employee.employeeId,
         overwrite: true
       });
 
       finalPhotoUrl = uploadResult.secure_url;
+    } else if (value.photoUrl === "") {
+      if (employee.photoUrl) {
+        try {
+          await cloudinary.uploader.destroy(publicId, {
+            resource_type: "image",
+            invalidate: true
+          });
+        } catch (cloudErr) {
+          console.error("Employee image delete failed:", cloudErr);
+        }
+      }
+
+      finalPhotoUrl = "";
     }
 
     employee.fullName = value.fullName.trim();
@@ -960,11 +1013,27 @@ router.put("/employees/:id", upload.single("photo"), async (req, res) => {
    ========================= */
 router.delete("/employees/:id", async (req, res) => {
   try {
-    const deleted = await Employee.findByIdAndDelete(req.params.id);
+    const employee = await Employee.findById(req.params.id);
 
-    if (!deleted) {
+    if (!employee) {
       return res.status(404).json({ message: "Not found" });
     }
+
+    if (employee.photoUrl) {
+      try {
+        await cloudinary.uploader.destroy(
+          getEmployeePhotoPublicId(employee.employeeId),
+          {
+            resource_type: "image",
+            invalidate: true
+          }
+        );
+      } catch (cloudErr) {
+        console.error("Employee Cloudinary delete failed:", cloudErr);
+      }
+    }
+
+    await Employee.findByIdAndDelete(req.params.id);
 
     return res.json({ message: "Employee deleted successfully" });
   } catch (err) {

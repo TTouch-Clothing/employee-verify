@@ -189,7 +189,10 @@ function ImagePickerWithCrop({
   label,
   photoPreview,
   setPhotoPreview,
-  setPhotoFile
+  setPhotoFile,
+  removeCurrentPhoto,
+  setRemoveCurrentPhoto,
+  previewLabel = "Selected Photo Preview"
 }) {
   const inputRef = useRef(null);
   const [tempImageSrc, setTempImageSrc] = useState("");
@@ -200,6 +203,7 @@ function ImagePickerWithCrop({
 
     const imageUrl = URL.createObjectURL(file);
     setTempImageSrc(imageUrl);
+    setRemoveCurrentPhoto(false);
 
     if (inputRef.current) {
       inputRef.current.value = "";
@@ -210,11 +214,14 @@ function ImagePickerWithCrop({
     setPhotoFile(result.file);
     setPhotoPreview(result.previewUrl);
     setTempImageSrc("");
+    setRemoveCurrentPhoto(false);
   }
 
   function removeSelectedPhoto() {
     setPhotoFile(null);
     setPhotoPreview("");
+    setRemoveCurrentPhoto(true);
+
     if (inputRef.current) {
       inputRef.current.value = "";
     }
@@ -236,7 +243,7 @@ function ImagePickerWithCrop({
 
       {photoPreview && (
         <div style={{ marginBottom: 12 }}>
-          <div className="label">Selected Photo Preview</div>
+          <div className="label">{previewLabel}</div>
 
           <div className="imagePreviewBox">
             <img
@@ -249,6 +256,7 @@ function ImagePickerWithCrop({
               type="button"
               className="imageRemoveBtn"
               onClick={removeSelectedPhoto}
+              title="Remove image"
             >
               <i className="fa fa-times" />
             </button>
@@ -793,6 +801,7 @@ function CreateUserModal({ onClose, onSave }) {
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState("");
   const [saving, setSaving] = useState(false);
+  const [removeCurrentPhoto, setRemoveCurrentPhoto] = useState(false);
 
   async function submit(e) {
     e.preventDefault();
@@ -808,6 +817,8 @@ function CreateUserModal({ onClose, onSave }) {
 
       if (photoFile) {
         formData.append("photo", photoFile);
+      } else if (removeCurrentPhoto) {
+        formData.append("profileImageUrl", "");
       }
 
       await onSave(formData);
@@ -870,6 +881,9 @@ function CreateUserModal({ onClose, onSave }) {
             photoPreview={photoPreview}
             setPhotoPreview={setPhotoPreview}
             setPhotoFile={setPhotoFile}
+            removeCurrentPhoto={removeCurrentPhoto}
+            setRemoveCurrentPhoto={setRemoveCurrentPhoto}
+            previewLabel="Selected Photo Preview"
           />
 
           <button
@@ -890,6 +904,7 @@ function EditUserModal({ item, loading, onClose, onSave }) {
   const [role, setRole] = useState(item?.role || "HR");
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(item?.profileImageUrl || "");
+  const [removeCurrentPhoto, setRemoveCurrentPhoto] = useState(false);
   const [saving, setSaving] = useState(false);
 
   async function submit(e) {
@@ -903,6 +918,8 @@ function EditUserModal({ item, loading, onClose, onSave }) {
 
       if (photoFile) {
         formData.append("photo", photoFile);
+      } else if (removeCurrentPhoto) {
+        formData.append("profileImageUrl", "");
       }
 
       await onSave(item._id, formData);
@@ -954,6 +971,9 @@ function EditUserModal({ item, loading, onClose, onSave }) {
             photoPreview={photoPreview}
             setPhotoPreview={setPhotoPreview}
             setPhotoFile={setPhotoFile}
+            removeCurrentPhoto={removeCurrentPhoto}
+            setRemoveCurrentPhoto={setRemoveCurrentPhoto}
+            previewLabel={photoFile ? "Selected Photo Preview" : "Current Photo"}
           />
 
           <button

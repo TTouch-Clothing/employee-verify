@@ -108,6 +108,7 @@ export default function EmployeesPage() {
     setLoading(true);
     try {
       const qs = new URLSearchParams();
+
       if (search.trim()) qs.set("search", search.trim());
       if (status !== "ALL") qs.set("status", status);
       if (department !== "ALL") qs.set("department", department);
@@ -476,6 +477,7 @@ function EmployeeModal({ modal, onClose, onSave }) {
 
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(it.photoUrl || "");
+  const [removeCurrentPhoto, setRemoveCurrentPhoto] = useState(false);
 
   const [saving, setSaving] = useState(false);
 
@@ -505,7 +507,9 @@ function EmployeeModal({ modal, onClose, onSave }) {
       formData.append("designation", designation.trim());
       formData.append("status", status);
 
-      if (joinDate) formData.append("joinDate", joinDate);
+      if (joinDate) {
+        formData.append("joinDate", joinDate);
+      }
 
       if (!isPresent && endDate) {
         formData.append("endDate", endDate);
@@ -513,6 +517,8 @@ function EmployeeModal({ modal, onClose, onSave }) {
 
       if (photoFile) {
         formData.append("photo", photoFile);
+      } else if (removeCurrentPhoto) {
+        formData.append("photoUrl", "");
       }
 
       await onSave(formData);
@@ -526,6 +532,7 @@ function EmployeeModal({ modal, onClose, onSave }) {
   function handlePresentChange(e) {
     const checked = e.target.checked;
     setIsPresent(checked);
+
     if (checked) {
       setEndDate("");
     }
@@ -534,6 +541,8 @@ function EmployeeModal({ modal, onClose, onSave }) {
   function handlePhotoChange(e) {
     const file = e.target.files?.[0] || null;
     if (!file) return;
+
+    setRemoveCurrentPhoto(false);
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -553,12 +562,14 @@ function EmployeeModal({ modal, onClose, onSave }) {
     setPhotoFile(croppedFile);
     setPhotoPreview(previewUrl);
     setImageSrc("");
+    setRemoveCurrentPhoto(false);
   }
 
   function handleRemovePhoto() {
     setPhotoFile(null);
     setPhotoPreview("");
     setImageSrc("");
+    setRemoveCurrentPhoto(true);
   }
 
   return (
@@ -580,7 +591,7 @@ function EmployeeModal({ modal, onClose, onSave }) {
                 label="Employee ID"
                 value={employeeId}
                 onChange={(e) => setEmployeeId(e.target.value)}
-                placeholder="TT-000123"
+                placeholder="TT000123"
               />
               <Input
                 label="Date of Birth (YYYY-MM-DD)"
@@ -751,7 +762,7 @@ function EmployeeModal({ modal, onClose, onSave }) {
                     background: "#dc2626",
                     color: "#fff",
                     fontSize: 18,
-                    fontWeight: 500,
+                    fontWeight: 400,
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
