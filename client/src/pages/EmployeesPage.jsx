@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Cropper from "react-easy-crop";
 import { http } from "../api/http";
 import Card from "../components/Card";
 import Input from "../components/Input";
@@ -33,6 +34,51 @@ function getDuration(item) {
   const join = item?.joinDate ? formatDate(item.joinDate) : "-";
   const end = item?.endDate ? formatDate(item.endDate) : "Present";
   return `${join} → ${end}`;
+}
+
+function createImage(url) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve(image));
+    image.addEventListener("error", (error) => reject(error));
+    image.setAttribute("crossOrigin", "anonymous");
+    image.src = url;
+  });
+}
+
+async function getCroppedImg(imageSrc, pixelCrop) {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+
+  return new Promise((resolve) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const file = new File([blob], `employee-${Date.now()}.jpg`, {
+          type: "image/jpeg"
+        });
+        resolve(file);
+      },
+      "image/jpeg",
+      0.95
+    );
+  });
 }
 
 export default function EmployeesPage() {
@@ -268,7 +314,7 @@ export default function EmployeesPage() {
                       style={{
                         width: 56,
                         height: 56,
-                        borderRadius: 10,
+                        borderRadius: "10%",
                         objectFit: "cover",
                         border: "1px solid var(--border)"
                       }}
@@ -427,9 +473,20 @@ function EmployeeModal({ modal, onClose, onSave }) {
     it.endDate ? new Date(it.endDate).toISOString().slice(0, 10) : ""
   );
   const [isPresent, setIsPresent] = useState(!it.endDate);
+
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(it.photoUrl || "");
+
   const [saving, setSaving] = useState(false);
+
+  const [imageSrc, setImageSrc] = useState("");
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+
+  const onCropComplete = useCallback((_, croppedPixels) => {
+    setCroppedAreaPixels(croppedPixels);
+  }, []);
 
   async function submit(e) {
     e.preventDefault();
@@ -476,13 +533,32 @@ function EmployeeModal({ modal, onClose, onSave }) {
 
   function handlePhotoChange(e) {
     const file = e.target.files?.[0] || null;
-    setPhotoFile(file);
+    if (!file) return;
 
-    if (file) {
-      setPhotoPreview(URL.createObjectURL(file));
-    } else {
-      setPhotoPreview(it.photoUrl || "");
-    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImageSrc(reader.result?.toString() || "");
+      setZoom(1);
+      setCrop({ x: 0, y: 0 });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function handleCropSave() {
+    if (!imageSrc || !croppedAreaPixels) return;
+
+    const croppedFile = await getCroppedImg(imageSrc, croppedAreaPixels);
+    const previewUrl = URL.createObjectURL(croppedFile);
+
+    setPhotoFile(croppedFile);
+    setPhotoPreview(previewUrl);
+    setImageSrc("");
+  }
+
+  function handleRemovePhoto() {
+    setPhotoFile(null);
+    setPhotoPreview("");
+    setImageSrc("");
   }
 
   return (
@@ -636,21 +712,56 @@ function EmployeeModal({ modal, onClose, onSave }) {
           </div>
 
           {photoPreview && (
-            <div style={{ marginBottom: 12 }}>
+            <div style={{ marginBottom: 14 }}>
               <div className="label">
                 {photoFile ? "Selected Photo Preview" : "Current Photo"}
               </div>
-              <img
-                src={photoPreview}
-                alt="Employee preview"
+
+              <div
                 style={{
+                  position: "relative",
                   width: 120,
-                  height: 120,
-                  objectFit: "cover",
-                  borderRadius: 12,
-                  border: "1px solid var(--border)"
+                  height: 120
                 }}
-              />
+              >
+                <img
+                  src={photoPreview}
+                  alt="Employee preview"
+                  style={{
+                    width: 120,
+                    height: 120,
+                    objectFit: "cover",
+                    borderRadius: "10%",
+                    border: "1px solid var(--border)"
+                  }}
+                />
+
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  title="Remove image"
+                  style={{
+                    position: "absolute",
+                    top: -8,
+                    right: -8,
+                    width: 22,
+                    height: 22,
+                    borderRadius: "50%",
+                    border: "none",
+                    background: "#dc2626",
+                    color: "#fff",
+                    fontSize: 18,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 4px 10px rgba(0,0,0,.18)"
+                  }}
+                >
+                  ×
+                </button>
+              </div>
             </div>
           )}
 
@@ -663,6 +774,106 @@ function EmployeeModal({ modal, onClose, onSave }) {
             {saving ? "Saving..." : "Save"}
           </button>
         </form>
+
+        {imageSrc && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(15, 23, 42, 0.55)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 16,
+              zIndex: 1200
+            }}
+            onMouseDown={() => setImageSrc("")}
+          >
+            <div
+              className="card"
+              style={{
+                width: "100%",
+                maxWidth: 520,
+                padding: 16,
+                borderRadius: 18
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <div className="modalHeader">
+                <div style={{ fontWeight: 900, fontSize: 18 }}>Crop Image</div>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setImageSrc("")}
+                >
+                  Close
+                </button>
+              </div>
+
+              <div
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  height: 320,
+                  background: "#0f172a",
+                  borderRadius: 16,
+                  overflow: "hidden",
+                  marginTop: 10
+                }}
+              >
+                <Cropper
+                  image={imageSrc}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={1}
+                  cropShape="round"
+                  showGrid={false}
+                  onCropChange={setCrop}
+                  onZoomChange={setZoom}
+                  onCropComplete={onCropComplete}
+                />
+              </div>
+
+              <div style={{ marginTop: 14 }}>
+                <div className="label">Zoom</div>
+                <input
+                  type="range"
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  value={zoom}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  style={{ width: "100%" }}
+                />
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  marginTop: 16,
+                  justifyContent: "flex-end",
+                  flexWrap: "wrap"
+                }}
+              >
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setImageSrc("")}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleCropSave}
+                >
+                  Save Crop
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -693,7 +904,7 @@ function EmployeeDetailsModal({ item, onClose }) {
               style={{
                 width: 120,
                 height: 120,
-                borderRadius: 16,
+                borderRadius: "50%",
                 objectFit: "cover",
                 border: "1px solid var(--border)"
               }}

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Cropper from "react-easy-crop";
 import { http } from "../api/http";
 import Card from "../components/Card";
 import Input from "../components/Input";
@@ -49,6 +50,223 @@ function PasswordField({ label, value, onChange, placeholder = "" }) {
   );
 }
 
+function createImage(url) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve(image));
+    image.addEventListener("error", (error) => reject(error));
+    image.setAttribute("crossOrigin", "anonymous");
+    image.src = url;
+  });
+}
+
+async function getCroppedImg(imageSrc, pixelCrop) {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("Failed to create cropped image"));
+          return;
+        }
+
+        const file = new File([blob], `profile-${Date.now()}.png`, {
+          type: "image/png"
+        });
+
+        resolve({
+          file,
+          previewUrl: URL.createObjectURL(blob)
+        });
+      },
+      "image/png",
+      1
+    );
+  });
+}
+
+function CropImageModal({ imageSrc, onClose, onSave }) {
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1.2);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const onCropComplete = (_, croppedAreaPixelsValue) => {
+    setCroppedAreaPixels(croppedAreaPixelsValue);
+  };
+
+  async function handleSave() {
+    if (!croppedAreaPixels) return;
+
+    try {
+      setSaving(true);
+      const result = await getCroppedImg(imageSrc, croppedAreaPixels);
+      onSave(result);
+    } catch {
+      toast.error("Failed to crop image");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="modalBackdrop" onMouseDown={onClose}>
+      <div
+        className="modal card cropModal"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="modalHeader">
+          <div style={{ fontWeight: 950, fontSize: 18 }}>Crop Profile Photo</div>
+          <button className="btn btn-ghost" onClick={onClose} type="button">
+            Close
+          </button>
+        </div>
+
+        <div className="cropContainer">
+          <Cropper
+            image={imageSrc}
+            crop={crop}
+            zoom={zoom}
+            aspect={1}
+            cropShape="round"
+            showGrid={false}
+            onCropChange={setCrop}
+            onCropComplete={onCropComplete}
+            onZoomChange={setZoom}
+          />
+        </div>
+
+        <div style={{ marginTop: 16 }}>
+          <div className="label">Zoom</div>
+          <input
+            type="range"
+            min={1}
+            max={3}
+            step={0.1}
+            value={zoom}
+            onChange={(e) => setZoom(Number(e.target.value))}
+            style={{ width: "100%" }}
+          />
+        </div>
+
+        <div className="cropActionRow">
+          <button className="btn btn-ghost" type="button" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className="btn btn-primary"
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? "Cropping..." : "Crop & Save"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ImagePickerWithCrop({
+  label,
+  photoPreview,
+  setPhotoPreview,
+  setPhotoFile
+}) {
+  const inputRef = useRef(null);
+  const [tempImageSrc, setTempImageSrc] = useState("");
+
+  function handlePhotoChange(e) {
+    const file = e.target.files?.[0] || null;
+    if (!file) return;
+
+    const imageUrl = URL.createObjectURL(file);
+    setTempImageSrc(imageUrl);
+
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+  }
+
+  function handleCropSave(result) {
+    setPhotoFile(result.file);
+    setPhotoPreview(result.previewUrl);
+    setTempImageSrc("");
+  }
+
+  function removeSelectedPhoto() {
+    setPhotoFile(null);
+    setPhotoPreview("");
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+  }
+
+  return (
+    <>
+      <div style={{ marginBottom: 12 }}>
+        <div className="label">{label}</div>
+
+        <input
+          ref={inputRef}
+          className="fileInputNice"
+          type="file"
+          accept="image/png,image/jpeg,image/jpg,image/webp"
+          onChange={handlePhotoChange}
+        />
+      </div>
+
+      {photoPreview && (
+        <div style={{ marginBottom: 12 }}>
+          <div className="label">Selected Photo Preview</div>
+
+          <div className="imagePreviewBox">
+            <img
+              src={photoPreview}
+              alt="Profile preview"
+              className="imagePreviewThumb"
+            />
+
+            <button
+              type="button"
+              className="imageRemoveBtn"
+              onClick={removeSelectedPhoto}
+            >
+              <i className="fa fa-times" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {tempImageSrc && (
+        <CropImageModal
+          imageSrc={tempImageSrc}
+          onClose={() => setTempImageSrc("")}
+          onSave={handleCropSave}
+        />
+      )}
+    </>
+  );
+}
+
 export default function AdminDashboard() {
   const currentUser = JSON.parse(localStorage.getItem("adminUser") || "null");
   const isAdmin = currentUser?.role === "ADMIN";
@@ -76,22 +294,22 @@ export default function AdminDashboard() {
     limit: 5
   });
 
-async function loadStats() {
-  try {
-    const { data } = await http.get("/api/admin/stats");
-    setStats(data);
-  } catch (error) {
-    if (error?.response?.status === 401) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("adminUser");
-      toast.error("Session expired. Please login again.");
-      window.location.href = "/admin/login";
-      return;
-    }
+  async function loadStats() {
+    try {
+      const { data } = await http.get("/api/admin/stats");
+      setStats(data);
+    } catch (error) {
+      if (error?.response?.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("adminUser");
+        toast.error("Session expired. Please login again.");
+        window.location.href = "/admin/login";
+        return;
+      }
 
-    setStats({ error: true });
+      setStats({ error: true });
+    }
   }
-}
 
   async function loadUsers(page = 1) {
     setUsersLoading(true);
@@ -209,21 +427,21 @@ async function loadStats() {
     loadUsers(1);
   }
 
-if (!stats) {
-  return (
-    <div style={{ padding: 20, fontWeight: 700, color: "var(--muted)" }}>
-      Loading dashboard...
-    </div>
-  );
-}
+  if (!stats) {
+    return (
+      <div style={{ padding: 20, fontWeight: 700, color: "var(--muted)" }}>
+        Loading dashboard...
+      </div>
+    );
+  }
 
-if (stats.error) {
-  return (
-    <div style={{ padding: 20, color: "var(--red)", fontWeight: 700 }}>
-      Failed to load dashboard data.
-    </div>
-  );
-}
+  if (stats.error) {
+    return (
+      <div style={{ padding: 20, color: "var(--red)", fontWeight: 700 }}>
+        Failed to load dashboard data.
+      </div>
+    );
+  }
 
   const box = (title, value, color) => (
     <Card style={{ padding: 14 }}>
@@ -398,7 +616,7 @@ if (stats.error) {
                       style={{
                         width: 56,
                         height: 56,
-                        borderRadius: 10,
+                        borderRadius: 12,
                         objectFit: "cover",
                         border: "1px solid var(--border)"
                       }}
@@ -576,17 +794,6 @@ function CreateUserModal({ onClose, onSave }) {
   const [photoPreview, setPhotoPreview] = useState("");
   const [saving, setSaving] = useState(false);
 
-  function handlePhotoChange(e) {
-    const file = e.target.files?.[0] || null;
-    setPhotoFile(file);
-
-    if (file) {
-      setPhotoPreview(URL.createObjectURL(file));
-    } else {
-      setPhotoPreview("");
-    }
-  }
-
   async function submit(e) {
     e.preventDefault();
     setSaving(true);
@@ -658,33 +865,12 @@ function CreateUserModal({ onClose, onSave }) {
             onChange={(e) => setConfirmPassword(e.target.value)}
           />
 
-          <div style={{ marginBottom: 12 }}>
-            <div className="label">Profile Photo</div>
-            <input
-              className="input"
-              type="file"
-              accept="image/png,image/jpeg,image/jpg,image/webp"
-              onChange={handlePhotoChange}
-              style={{ padding: "10px 12px", height: "auto" }}
-            />
-          </div>
-
-          {photoPreview && (
-            <div style={{ marginBottom: 12 }}>
-              <div className="label">Selected Photo Preview</div>
-              <img
-                src={photoPreview}
-                alt="Profile preview"
-                style={{
-                  width: 120,
-                  height: 120,
-                  objectFit: "cover",
-                  borderRadius: 12,
-                  border: "1px solid var(--border)"
-                }}
-              />
-            </div>
-          )}
+          <ImagePickerWithCrop
+            label="Profile Photo"
+            photoPreview={photoPreview}
+            setPhotoPreview={setPhotoPreview}
+            setPhotoFile={setPhotoFile}
+          />
 
           <button
             className="btn btn-primary"
@@ -705,17 +891,6 @@ function EditUserModal({ item, loading, onClose, onSave }) {
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(item?.profileImageUrl || "");
   const [saving, setSaving] = useState(false);
-
-  function handlePhotoChange(e) {
-    const file = e.target.files?.[0] || null;
-    setPhotoFile(file);
-
-    if (file) {
-      setPhotoPreview(URL.createObjectURL(file));
-    } else {
-      setPhotoPreview(item?.profileImageUrl || "");
-    }
-  }
 
   async function submit(e) {
     e.preventDefault();
@@ -774,33 +949,12 @@ function EditUserModal({ item, loading, onClose, onSave }) {
             </select>
           </div>
 
-          <div style={{ marginBottom: 12 }}>
-            <div className="label">Profile Photo</div>
-            <input
-              className="input"
-              type="file"
-              accept="image/png,image/jpeg,image/jpg,image/webp"
-              onChange={handlePhotoChange}
-              style={{ padding: "10px 12px", height: "auto" }}
-            />
-          </div>
-
-          {photoPreview && (
-            <div style={{ marginBottom: 12 }}>
-              <div className="label">Photo Preview</div>
-              <img
-                src={photoPreview}
-                alt="Profile preview"
-                style={{
-                  width: 120,
-                  height: 120,
-                  objectFit: "cover",
-                  borderRadius: 12,
-                  border: "1px solid var(--border)"
-                }}
-              />
-            </div>
-          )}
+          <ImagePickerWithCrop
+            label="Profile Photo"
+            photoPreview={photoPreview}
+            setPhotoPreview={setPhotoPreview}
+            setPhotoFile={setPhotoFile}
+          />
 
           <button
             className="btn btn-primary"
@@ -848,7 +1002,7 @@ function UserDetailsModal({ item, onClose }) {
               style={{
                 width: 120,
                 height: 120,
-                borderRadius: 16,
+                borderRadius: 18,
                 objectFit: "cover",
                 border: "1px solid var(--border)"
               }}
@@ -902,7 +1056,7 @@ function DeleteConfirmModal({ user, loading, onClose, onConfirm }) {
             style={{
               width: 70,
               height: 70,
-              borderRadius: "50%",
+              borderRadius: 16,
               background: "rgba(220,38,38,.12)",
               color: "var(--red)",
               display: "flex",

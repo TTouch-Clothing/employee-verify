@@ -733,3 +733,110 @@ img {
     padding: 16px;
   }
 }
+
+
+
+
+
+
+
+
+
+.fileInputNice {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: #fff;
+  color: var(--text);
+}
+
+.imagePreviewBox {
+  position: relative;
+  display: inline-block;
+  width: 120px;
+  height: 120px;
+  overflow: visible;
+}
+
+.imagePreviewThumb {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  display: block;
+  background: #fff;
+}
+
+.imageRemoveBtn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: #ef4444;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 18px rgba(239, 68, 68, 0.25);
+  font-size: 12px;
+  transition: 0.2s ease;
+  z-index: 2;
+}
+
+.imageRemoveBtn:hover {
+  background: #dc2626;
+  transform: scale(1.05);
+}
+
+.cropModal {
+  max-width: 560px;
+}
+
+.cropContainer {
+  position: relative;
+  width: 100%;
+  height: 340px;
+  background: #111827;
+  border-radius: 18px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.cropActionRow {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .imagePreviewBox {
+    width: 110px;
+    height: 110px;
+  }
+
+  .imagePreviewThumb {
+    width: 110px;
+    height: 110px;
+    border-radius: 16px;
+  }
+
+  .imageRemoveBtn {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
+    top: -6px;
+    right: -6px;
+  }
+
+  .cropContainer {
+    height: 280px;
+  }
+}
