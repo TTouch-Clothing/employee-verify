@@ -20,24 +20,53 @@ export default function AdminLayout() {
     navigate("/admin/login", { replace: true });
   }
 
+  function toggleMenu() {
+    setMenuOpen((prev) => !prev);
+  }
+
   useEffect(() => {
     setMenuOpen(false);
   }, [loc.pathname]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 900) {
+        setMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [menuOpen]);
 
   return (
     <div className="adminLayoutWrap">
       <div className="mobileTopbar">
         <button
           className="hamburgerBtn"
-          onClick={() => setMenuOpen(true)}
+          onClick={toggleMenu}
           type="button"
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={menuOpen}
         >
-          <i className="fa fa-bars" />
+          <i className={`fa ${menuOpen ? "fa-times" : "fa-bars"}`} />
         </button>
 
         <div className="mobileTopbarTitle">Admin Panel</div>
 
-        <div style={{ width: 40 }} />
+        <div className="mobileTopbarSpacer" />
       </div>
 
       {menuOpen && (
@@ -48,24 +77,14 @@ export default function AdminLayout() {
       )}
 
       <aside className={`adminSidebar ${menuOpen ? "open" : ""}`}>
-        <div
-          style={{
-            fontWeight: 900,
-            fontSize: 18,
-            padding: "0 20px",
-            marginBottom: 20,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12
-          }}
-        >
+        <div className="adminSidebarHeader">
           <span>Admin Panel</span>
 
           <button
             className="sidebarCloseBtn"
             onClick={() => setMenuOpen(false)}
             type="button"
+            aria-label="Close sidebar"
           >
             <i className="fa fa-times" />
           </button>
@@ -172,7 +191,8 @@ export default function AdminLayout() {
                     color: "rgba(255,255,255,.7)",
                     whiteSpace: "nowrap",
                     overflow: "hidden",
-                    textOverflow: "ellipsis"
+                    textOverflow: "ellipsis",
+                    textTransform: "uppercase"
                   }}
                 >
                   {adminUser.role || ""}

@@ -447,7 +447,6 @@ img {
   flex-wrap: wrap;
 }
 
-/* Existing mobile support */
 @media (max-width: 900px) {
   .grid-2 {
     grid-template-columns: 1fr;
@@ -634,10 +633,9 @@ img {
   object-fit: contain;
 }
 
-
-
-
-
+/* =========================
+   Admin Layout
+========================= */
 
 .adminLayoutWrap {
   min-height: 100vh;
@@ -659,6 +657,17 @@ img {
   transition: transform 0.25s ease;
 }
 
+.adminSidebarHeader {
+  font-weight: 900;
+  font-size: 18px;
+  padding: 0 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .adminMainContent {
   margin-left: 240px;
   min-height: 100vh;
@@ -670,19 +679,35 @@ img {
   display: none;
 }
 
+.mobileTopbarTitle {
+  font-weight: 900;
+  font-size: 16px;
+}
+
+.mobileTopbarSpacer {
+  width: 40px;
+  height: 40px;
+}
+
 .hamburgerBtn,
 .sidebarCloseBtn {
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,.15);
-  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
   color: #fff;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
+  transition: 0.2s ease;
+}
+
+.hamburgerBtn:hover,
+.sidebarCloseBtn:hover {
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .mobileSidebarOverlay {
@@ -713,15 +738,11 @@ img {
     z-index: 1100;
   }
 
-  .mobileTopbarTitle {
-    font-weight: 900;
-    font-size: 16px;
-  }
-
   .adminSidebar {
     transform: translateX(-100%);
     width: 260px;
     max-width: 85vw;
+    padding-top: 16px;
   }
 
   .adminSidebar.open {
@@ -732,15 +753,15 @@ img {
     margin-left: 0;
     padding: 16px;
   }
+
+  .sidebarCloseBtn {
+    display: inline-flex;
+  }
 }
 
-
-
-
-
-
-
-
+/* =========================
+   Image Upload / Crop
+========================= */
 
 .fileInputNice {
   width: 100%;
