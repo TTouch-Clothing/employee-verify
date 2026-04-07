@@ -27,7 +27,7 @@ export default function VerifyPage() {
 
       const { data } = await http.post("/api/verify", {
         employeeId,
-        secret
+        secret,
       });
 
       setResult({ ok: true, data });
@@ -55,7 +55,7 @@ export default function VerifyPage() {
     const date = new Date(value);
     const day = date.getDate();
     const month = date.toLocaleString("en-US", {
-      month: "long"
+      month: "long",
     });
     const year = date.getFullYear();
 
@@ -83,33 +83,74 @@ export default function VerifyPage() {
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-      hour12: true
+      hour12: true,
     });
   }
 
   return (
     <div>
-      <div>
-        <div className="topbar">
-          <div className="container">
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <img
-                src="/titleImg.png"
-                alt="TTouch Logo"
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: "50%",
-                  objectFit: "cover"
-                }}
-              />
-              <div style={{ fontWeight: 900 }}>Touch Clothing</div>
+      {/* PREMIUM HEADER */}
+      <header
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
+          background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          boxShadow: "0 10px 30px rgba(15, 23, 42, 0.18)",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1100,
+            margin: "0 auto",
+            padding: "12px 14px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <img
+              src="/titleImg.png"
+              alt="Logo"
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: "50%",
+                objectFit: "cover",
+                border: "2px solid rgba(255,255,255,0.2)",
+              }}
+            />
+            <div
+              style={{
+                color: "#fff",
+                fontWeight: 900,
+                fontSize: 14,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Touch Clothing
             </div>
-
-            <div style={{ opacity: 0.9 }}>Employee Verification</div>
           </div>
+
+          <span
+            style={{
+              padding: "6px 10px",
+              borderRadius: 999,
+              background: "rgba(255,255,255,0.1)",
+              border: "1px solid rgba(255,255,255,0.2)",
+              color: "#fff",
+              fontSize: 12,
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+            }}
+          >
+            Employee Verification
+          </span>
         </div>
-      </div>
+      </header>
 
       <div className="container">
         <div className="h1">Employee Verification</div>
@@ -135,8 +176,35 @@ export default function VerifyPage() {
               />
 
               <button
-                className="btn btn-primary"
-                style={{ width: "100%" }}
+                style={{
+                  width: "100%",
+                  marginTop: 12,
+                  borderRadius: 14,
+                  fontWeight: 800,
+                  fontSize: 14,
+                  padding: "12px 16px",
+                  border: "none",
+                  outline: "none",
+                  cursor: loading ? "not-allowed" : "pointer",
+                  opacity: loading ? 0.7 : 1,
+                  background:
+                    "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+                  color: "#ffffff",
+                  boxShadow: "0 10px 25px rgba(15, 23, 42, 0.35)",
+                  transition: "all 0.25s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading) {
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow =
+                      "0 14px 35px rgba(15, 23, 42, 0.45)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow =
+                    "0 10px 25px rgba(15, 23, 42, 0.35)";
+                }}
                 disabled={loading}
               >
                 {loading ? "Please wait..." : "Verify"}
@@ -147,7 +215,7 @@ export default function VerifyPage() {
                   textAlign: "center",
                   marginTop: 10,
                   fontSize: 12,
-                  color: "var(--muted)"
+                  color: "var(--muted)",
                 }}
               >
                 We show limited information for privacy.
@@ -162,7 +230,7 @@ export default function VerifyPage() {
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                alignItems: "center"
+                alignItems: "center",
               }}
             >
               <div style={{ fontWeight: 800 }}>Result</div>
@@ -198,7 +266,7 @@ export default function VerifyPage() {
                       borderRadius: 14,
                       objectFit: "cover",
                       border: "1px solid var(--border)",
-                      cursor: "pointer"
+                      cursor: "pointer",
                     }}
                   />
 
@@ -238,7 +306,7 @@ export default function VerifyPage() {
                       style={{
                         marginTop: 10,
                         fontSize: 12,
-                        color: "var(--muted)"
+                        color: "var(--muted)",
                       }}
                     >
                       Verified on: {formatVerifiedAt(result.data.verifiedAt)}
@@ -260,7 +328,7 @@ export default function VerifyPage() {
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                alignItems: "center"
+                alignItems: "center",
               }}
             >
               <div style={{ fontWeight: 800 }}>Privacy</div>
@@ -271,7 +339,7 @@ export default function VerifyPage() {
               style={{
                 marginTop: 14,
                 color: "var(--muted)",
-                lineHeight: 1.6
+                lineHeight: 1.6,
               }}
             >
               This portal confirms employment authenticity and status only. No
@@ -298,7 +366,7 @@ export default function VerifyPage() {
             alignItems: "center",
             justifyContent: "center",
             padding: 16,
-            zIndex: 9999
+            zIndex: 9999,
           }}
         >
           <div
@@ -307,7 +375,7 @@ export default function VerifyPage() {
               position: "relative",
               maxWidth: "95vw",
               maxHeight: "95vh",
-              width: "fit-content"
+              width: "fit-content",
             }}
           >
             <button
@@ -326,7 +394,7 @@ export default function VerifyPage() {
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: "pointer",
-                boxShadow: "0 8px 24px rgba(0,0,0,0.25)"
+                boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
               }}
             >
               <X size={20} />
@@ -343,7 +411,7 @@ export default function VerifyPage() {
                 height: "auto",
                 borderRadius: 16,
                 objectFit: "contain",
-                background: "#fff"
+                background: "#fff",
               }}
             />
           </div>
